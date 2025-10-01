@@ -67,7 +67,7 @@ services:
   # Zookeeper for Kafka
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
-    container_name: nasa_zookeeper
+    container_name: shopstream
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -80,7 +80,7 @@ services:
   # Kafka message broker
   kafka:
     image: confluentinc/cp-kafka:7.4.0
-    container_name: nasa_kafka
+    container_name: shopstream
     depends_on:
       - zookeeper
     ports:

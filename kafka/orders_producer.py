@@ -27,7 +27,7 @@ class OrdersProducer:
             data = response.json()
             return data.get('carts', [])
         except requests.RequestException as e:
-            logger.error(f"Error fetching carts from DummyJSON: {e}")
+            logger.error(f"Error fetching carts {e}")
             return []
     
     def fetch_products_for_orders(self, product_ids):
@@ -106,26 +106,19 @@ class OrdersProducer:
             logger.error(f"Error sending order {order['order_id']}: {e}")
     
     def produce_orders(self, batch_size=5, delay_seconds=10):
-
         logger.info(f"Starting orders producer for topic: {self.topic}")
-        
         while True:
             try:
-
                 carts = self.fetch_carts_from_dummyjson(limit=batch_size)
-                
                 if not carts:
-                    logger.warning("No carts fetched from DummyJSON, retrying...")
+                    logger.warning("No carts fetched ")
                     time.sleep(delay_seconds)
                     continue
-                
                 for cart in carts:
                     order = self.transform_cart_to_order(cart)
                     self.send_order(order)
-                
                 logger.info(f"Processed {len(carts)} orders from DummyJSON")
-                time.sleep(delay_seconds)
-                
+                time.sleep(delay_seconds) # avoid rate limiting
             except KeyboardInterrupt:
                 logger.info("Stopping orders producer...")
                 break

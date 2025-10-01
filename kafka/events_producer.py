@@ -6,15 +6,13 @@ from kafka import KafkaProducer
 import requests
 import logging
 
-# Configure logging
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class EventsProducer:
     def __init__(self, bootstrap_servers='localhost:9092', topic='events'):
-        """
-        Initialize the events producer that generates user interaction events
-        """
+
         self.bootstrap_servers = bootstrap_servers
         self.topic = topic
         self.producer = KafkaProducer(
@@ -25,9 +23,7 @@ class EventsProducer:
         self.dummyjson_url = "https://dummyjson.com"
         
     def fetch_users_for_events(self, limit=50):
-        """
-        Fetch users from DummyJSON to generate events for
-        """
+
         try:
             response = requests.get(f"{self.dummyjson_url}/users?limit={limit}")
             response.raise_for_status()
@@ -38,9 +34,7 @@ class EventsProducer:
             return []
     
     def fetch_products_for_events(self, limit=100):
-        """
-        Fetch products from DummyJSON to generate events for
-        """
+
         try:
             response = requests.get(f"{self.dummyjson_url}/products?limit={limit}")
             response.raise_for_status()
@@ -51,9 +45,7 @@ class EventsProducer:
             return []
     
     def generate_event(self, user, product=None):
-        """
-        Generate a random user interaction event
-        """
+
         event_types = [
             'page_view',
             'product_view',
@@ -74,8 +66,7 @@ class EventsProducer:
         
         event_type = random.choice(event_types)
         event_id = f"EVT-{int(time.time())}-{random.randint(1000, 9999)}"
-        
-        # Base event structure
+
         event = {
             "event_id": event_id,
             "event_type": event_type,
@@ -104,8 +95,7 @@ class EventsProducer:
             "city": user.get('address', {}).get('city', 'Unknown'),
             "created_at": datetime.now().isoformat()
         }
-        
-        # Add event-specific data
+
         if event_type in ['product_view', 'add_to_cart', 'remove_from_cart', 'wishlist_add', 'wishlist_remove'] and product:
             event["product_id"] = str(product.get('id', ''))
             event["product_name"] = product.get('title', '')
@@ -159,9 +149,7 @@ class EventsProducer:
         return event
     
     def send_event(self, event):
-        """
-        Send a single event record to Kafka
-        """
+
         try:
             future = self.producer.send(
                 self.topic,
@@ -174,12 +162,8 @@ class EventsProducer:
             logger.error(f"Error sending event {event['event_id']}: {e}")
     
     def produce_events(self, events_per_batch=20, delay_seconds=2):
-        """
-        Continuously produce user interaction events
-        """
         logger.info(f"Starting events producer for topic: {self.topic}")
-        
-        # Fetch users and products once
+
         users = self.fetch_users_for_events(limit=100)
         products = self.fetch_products_for_events(limit=200)
         
@@ -191,7 +175,6 @@ class EventsProducer:
         
         while True:
             try:
-                # Generate events for this batch
                 for _ in range(events_per_batch):
                     user = random.choice(users)
                     product = random.choice(products) if products else None
@@ -212,6 +195,5 @@ class EventsProducer:
         self.producer.close()
 
 if __name__ == "__main__":
-    # Initialize and run the events producer
     producer = EventsProducer()
     producer.produce_events(events_per_batch=30, delay_seconds=3)

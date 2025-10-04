@@ -1,3 +1,6 @@
-.venv/
+
+database/
 .env
-env/ 
+.venv/
+
+requirements.txt

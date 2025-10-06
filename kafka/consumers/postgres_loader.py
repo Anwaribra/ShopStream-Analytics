@@ -1,130 +1,118 @@
-# import json
-# import logging
-# from datetime import datetime
-# from kafka import KafkaConsumer
-# import psycopg2
-# from psycopg2.extras import RealDictCursor
-# import os
-# from dotenv import load_dotenv
+import json
+import logging
+import os
+from datetime import datetime, timezone
+from typing import Optional
 
-# load_dotenv()
+import psycopg2
+from dotenv import load_dotenv
+from kafka import KafkaConsumer
+from psycopg2.extras import Json
 
-# logging.basicConfig(level=logging.INFO)
-# logger = logging.getLogger(__name__)
 
-# class PostgresLoaderConsumer:
-#     def __init__(self, 
-#                  bootstrap_servers='localhost:9092', 
-#                  topics=['customers', 'orders', 'products', 'events'],
-#                  group_id='postgres_loader_group'):
-        
-#         self.bootstrap_servers = bootstrap_servers
-#         self.topics = topics
-#         self.group_id = group_id
-        
-#         self.db_config = {
-#             'host': os.getenv('POSTGRES_HOST'),
-#             'port': os.getenv('POSTGRES_PORT'),
-#             'database': os.getenv('POSTGRES_DB'),
-#             'user': os.getenv('POSTGRES_USER'),
-#             'password': os.getenv('POSTGRES_PASSWORD')
-#         }
-        
-#         self.consumer = KafkaConsumer(
-#             *topics,
-#             bootstrap_servers=bootstrap_servers,
-#             group_id=group_id,
-#             value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-#             key_deserializer=lambda m: m.decode('utf-8') if m else None,
-#             auto_offset_reset='earliest',
-#             enable_auto_commit=True,
-#             auto_commit_interval_ms=1000
-#         )
-        
-#         self.test_db_connection()
-    
-#     def test_db_connection(self):
-#         try:
-#             conn = psycopg2.connect(**self.db_config)
-#             conn.close()
-#             logger.info("Connected to PostgreSQL")
-#         except Exception as e:
-#             logger.error(f"Database connection failed: {e}")
-#             raise
-    
-#     def get_db_connection(self):
-#         return psycopg2.connect(**self.db_config)
-    
-#     def load_to_postgres(self, topic, data):
-#         conn = None
-#         try:
-#             conn = self.get_db_connection()
-#             cursor = conn.cursor(cursor_factory=RealDictCursor)
-            
-#             table_map = {
-#                 'customers': 'bronze.customers_raw',
-#                 'orders': 'bronze.orders_raw',
-#                 'products': 'bronze.products_raw'
-#             }
-            
-#             table = table_map.get(topic)
-#             if not table:
-#                 logger.warning(f"Unknown topic: {topic}")
-#                 return
-            
-#             id_field = f"{topic[:-1]}_id" if topic.endswith('s') else f"{topic}_id"
-#             record_id = data.get(id_field)
-#             created_at = data.get('created_at')
-#             updated_at = data.get('updated_at')
-            
-#             insert_query = f"""
-#                 INSERT INTO {table} ({id_field}, raw_data, created_at, updated_at)
-#                 VALUES (%s, %s, %s, %s)
-#                 ON CONFLICT ({id_field}) 
-#                 DO UPDATE SET 
-#                     raw_data = EXCLUDED.raw_data,
-#                     updated_at = EXCLUDED.updated_at
-#                 RETURNING id;
-#             """
-            
-#             cursor.execute(insert_query, (
-#                 record_id,
-#                 json.dumps(data),
-#                 created_at,
-#                 updated_at
-#             ))
-            
-#             result = cursor.fetchone()
-#             conn.commit()
-            
-#             logger.info(f"Loaded {topic} record {record_id} to PostgreSQL")
-#             return result['id']
-            
-#         except Exception as e:
-#             if conn:
-#                 conn.rollback()
-#             logger.error(f"Error loading to PostgreSQL: {e}")
-#             raise
-#         finally:
-#             if conn:
-#                 conn.close()
-    
-#     def start_consuming(self):
-#         logger.info(f"Starting PostgreSQL loader for topics: {self.topics}")
-        
-#         try:
-#             for message in self.consumer:
-#                 logger.info(f"Received: {message.topic}:{message.partition}:{message.offset}")
-#                 self.load_to_postgres(message.topic, message.value)
-                
-#         except KeyboardInterrupt:
-#             logger.info("Stopping PostgreSQL loader...")
-#         except Exception as e:
-#             logger.error(f"Error in PostgreSQL loader: {e}")
-#         finally:
-#             self.consumer.close()
-#             logger.info("PostgreSQL loader stopped")
+load_dotenv()
 
-# if __name__ == "__main__":
-#     consumer = PostgresLoaderConsumer()
-#     consumer.start_consuming()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def get_db_connection():
+    return psycopg2.connect(
+        host=os.getenv("POSTGRES_HOST", "localhost"),
+        port=os.getenv("POSTGRES_PORT", "5432"),
+        dbname=os.getenv("POSTGRES_DB", "shopstream_analytics"),
+        user=os.getenv("POSTGRES_USER", "postgres"),
+        password=os.getenv("POSTGRES_PASSWORD", "postgres"),
+    )
+
+
+def ensure_bronze_schema_and_table(conn) -> None:
+    with conn, conn.cursor() as cur:
+        cur.execute("CREATE SCHEMA IF NOT EXISTS bronze;")
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS bronze.raw_events (
+                id BIGSERIAL PRIMARY KEY,
+                topic TEXT NOT NULL,
+                record_key TEXT,
+                record_value JSONB NOT NULL,
+                partition INT,
+                "offset" BIGINT,
+                event_ts TIMESTAMPTZ,
+                ingested_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            """
+        )
+
+
+def get_consumer(topics: list[str]) -> KafkaConsumer:
+    bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+    group_id = os.getenv("KAFKA_CONSUMER_GROUP", "shopstream-postgres-loader")
+    auto_offset_reset = os.getenv("KAFKA_AUTO_OFFSET_RESET", "earliest")
+
+    consumer = KafkaConsumer(
+        *topics,
+        bootstrap_servers=bootstrap_servers,
+        group_id=group_id,
+        enable_auto_commit=True,
+        auto_offset_reset=auto_offset_reset,
+        value_deserializer=lambda v: json.loads(v.decode("utf-8")) if v else None,
+        key_deserializer=lambda k: k.decode("utf-8") if k else None,
+    )
+    return consumer
+
+
+def insert_event(conn, topic: str, key: Optional[str], value: dict, partition: int, offset: int, timestamp_ms: int) -> None:
+    event_ts = datetime.fromtimestamp(timestamp_ms / 1000.0, tz=timezone.utc)
+    with conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO bronze.raw_events (topic, record_key, record_value, partition, "offset", event_ts)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (topic, key, Json(value), partition, offset, event_ts),
+        )
+
+
+def run():
+    topics_env = os.getenv("KAFKA_TOPICS", "customers,orders,products,events").strip()
+    topics = [t.strip() for t in topics_env.split(",") if t.strip()]
+
+    logger.info(f"Starting Postgres loader for topics: {topics}")
+
+    consumer = get_consumer(topics)
+
+    conn = get_db_connection()
+    ensure_bronze_schema_and_table(conn)
+
+    try:
+        for msg in consumer:
+            try:
+                insert_event(
+                    conn=conn,
+                    topic=msg.topic,
+                    key=msg.key,
+                    value=msg.value,
+                    partition=msg.partition,
+                    offset=msg.offset,
+                    timestamp_ms=msg.timestamp,
+                )
+            except Exception as e:
+                logger.exception(f"Failed to insert message offset={msg.offset} topic={msg.topic}: {e}")
+    except KeyboardInterrupt:
+        logger.info("Stopping Postgres loader...")
+    finally:
+        try:
+            consumer.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+if __name__ == "__main__":
+    run()
+
+

@@ -4,3 +4,21 @@ database/
 .venv/
 
 requirements.txt
+
+.env
+.venv/
+
+requirements.txt
+
+.env
+.venv/
+
+requirements.txt
+
+checkpoints/
+
+
+
+airflow/dags/spark_streaming_dag.py
+kafka/consumers/spark_streaming.py
+kafka/consumers/postgres_loader.py

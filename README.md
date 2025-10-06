@@ -26,6 +26,41 @@ The project follows the **Medallion Architecture**:
 
 ---
 
+## Bronze Layer — Raw Data
+
+Stores data exactly as it comes from DummyJSON API via Kafka producers. Raw events are appended to Postgres in `bronze.raw_events`.
+
+- **Kafka → Postgres loader**: `kafka/consumers/postgres_loader.py`
+  - Reads topics from `KAFKA_TOPICS` (default: `customers,orders,products`).
+  - Ensures `bronze` schema and `bronze.raw_events` table exist.
+  - Writes each message with metadata: `topic`, `record_key`, `record_value` (JSONB), `partition`, `offset`, `event_ts`, `ingested_at`.
+
+- **Spark Structured Streaming (optional)**: `kafka/consumers/spark_streaming.py`
+  - Reads the same Kafka topics and writes to `bronze.raw_events` via JDBC using `foreachBatch`.
+
+Quick start:
+
+```bash
+# Postgres loader
+export KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+export KAFKA_TOPICS=customers,orders,products
+export POSTGRES_HOST=localhost
+export POSTGRES_PORT=5432
+export POSTGRES_DB=shopstream_analytics
+export POSTGRES_USER=postgres
+export POSTGRES_PASSWORD=postgres
+python kafka/consumers/postgres_loader.py
+```
+
+```bash
+# Spark streaming (needs PostgreSQL JDBC)
+spark-submit \
+  --packages org.postgresql:postgresql:42.7.3 \
+  kafka/consumers/spark_streaming.py
+```
+
+---
+
 <!-- ## Tech Stack
 - **PostgreSQL** → Data Warehouse  
 - **Apache Spark** → Real-time & batch processing  
@@ -45,7 +80,7 @@ The project uses the following API endpoints from DummyJSON:
 - `events.raw` → `/posts`  -->
 
 ---
-
+  76
 ## Pipeline Flow
 1. **Ingestion**: Kafka producers fetch data from DummyJSON API and publish events.  
 2. **Bronze Layer**: Kafka consumers write raw JSON into PostgreSQL.  

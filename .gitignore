@@ -1,4 +1,4 @@
-
+consumers/
 database/
 .env
 .venv/
@@ -16,7 +16,6 @@ requirements.txt
 requirements.txt
 
 checkpoints/
-
 
 
 airflow/dags/spark_streaming_dag.py

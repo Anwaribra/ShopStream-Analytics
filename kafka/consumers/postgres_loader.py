@@ -1,3 +1,5 @@
+# for test
+
 import json
 import logging
 import os
@@ -16,14 +18,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def get_db_connection():
-    return psycopg2.connect(
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=os.getenv("POSTGRES_PORT", "5432"),
-        dbname=os.getenv("POSTGRES_DB", "shopstream_analytics"),
-        user=os.getenv("POSTGRES_USER", "postgres"),
-        password=os.getenv("POSTGRES_PASSWORD", "postgres"),
-    )
+# def get_db_connection():
+#     return psycopg2.connect(
+#         host=os.getenv("POSTGRES_HOST", "localhost"),
+#         port=os.getenv("POSTGRES_PORT", "5432"),
+#         dbname=os.getenv("POSTGRES_DB", "shopstream_analytics"),
+#         user=os.getenv("POSTGRES_USER", "postgres"),
+#         password=os.getenv("POSTGRES_PASSWORD", "postgres"),
+#     )
 
 
 def ensure_bronze_schema_and_table(conn) -> None:
@@ -99,8 +101,6 @@ def run():
                 )
             except Exception as e:
                 logger.exception(f"Failed to insert message offset={msg.offset} topic={msg.topic}: {e}")
-    except KeyboardInterrupt:
-        logger.info("Stopping Postgres loader...")
     finally:
         try:
             consumer.close()

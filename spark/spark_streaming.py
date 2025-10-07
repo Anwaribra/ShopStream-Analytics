@@ -83,7 +83,6 @@ def run_stream():
             .format("jdbc")
             .option("url", jdbc_url)
             .option("dbtable", "bronze.raw_events")
-            .option("stringtype", "unspecified")
             .option("user", db_properties["user"])
             .option("password", db_properties["password"])
             .option("driver", db_properties["driver"])

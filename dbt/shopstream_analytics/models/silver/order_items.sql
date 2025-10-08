@@ -31,7 +31,7 @@ cleaned_order_items as (
         product->>'id' as product_id,
         (product->>'quantity')::integer as quantity,
         (product->>'price')::decimal as unit_price,
-        -- Stable, collision-safe key using order_id text + ordinal
+        
         md5(order_id || '-' || product_index::text) as order_item_id,
         event_ts as created_at
     from order_items

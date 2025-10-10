@@ -161,11 +161,11 @@ class EventsProducer:
         except Exception as e:
             logger.error(f"Error sending event {event['event_id']}: {e}")
     
-    def produce_events(self, events_per_batch=20, delay_seconds=2):
+    def produce_events(self, events_per_batch=200, delay_seconds=1):
         logger.info(f"Starting events producer for topic: {self.topic}")
 
-        users = self.fetch_users_for_events(limit=100)
-        products = self.fetch_products_for_events(limit=200)
+        users = self.fetch_users_for_events(limit=200)
+        products = self.fetch_products_for_events(limit=500)
         
         if not users:
             logger.error("No users available for event generation")

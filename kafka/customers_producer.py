@@ -20,15 +20,37 @@ class CustomersProducer:
         )
         self.dummyjson_url = "https://dummyjson.com/users"
         
-    def fetch_users_from_dummyjson(self, limit=100):
+    def fetch_users_from_dummyjson(self, limit=100, skip=0):
+        """Fetch users with pagination support"""
         try:
-            response = requests.get(f"{self.dummyjson_url}?limit={limit}")
+            response = requests.get(f"{self.dummyjson_url}?limit={limit}&skip={skip}")
             response.raise_for_status()
             data = response.json()
             return data.get('users', [])
         except requests.RequestException as e:
             logger.error(f"error fetching users: {e}")
             return []
+    
+    def fetch_multiple_user_pages(self, total_users=500):
+        """Fetch multiple pages of users to increase data volume"""
+        all_users = []
+        page_size = 100  # DummyJSON max per page
+        skip = 0
+        
+        while len(all_users) < total_users:
+            users = self.fetch_users_from_dummyjson(limit=page_size, skip=skip)
+            if not users:
+                break
+            
+            all_users.extend(users)
+            skip += page_size
+            
+            # Add small delay to respect API rate limits
+            time.sleep(0.1)
+            
+            logger.info(f"Fetched {len(all_users)} users so far...")
+        
+        return all_users[:total_users]
     
     def transform_user_to_customer(self, user):
 
@@ -77,23 +99,34 @@ class CustomersProducer:
         except Exception as e:
             logger.error(f"Error sending customer {customer['customer_id']}: {e}")
     
-    def produce_customers(self, batch_size=10, delay_seconds=5):
-
+    def produce_customers(self, batch_size=100, delay_seconds=2, total_users_per_cycle=500):
+        """Enhanced producer with pagination and higher volume"""
         logger.info(f"Starting customers producer for topic: {self.topic}")
         
         while True:
             try:
-                users = self.fetch_users_from_dummyjson(limit=batch_size)
+                # Fetch multiple pages of users for higher volume
+                users = self.fetch_multiple_user_pages(total_users=total_users_per_cycle)
                 
                 if not users:
                     logger.warning("No users fetched from DummyJSON, retrying...")
                     time.sleep(delay_seconds)
                     continue
-                for user in users:
-                    customer = self.transform_user_to_customer(user)
-                    self.send_customer(customer)
                 
-                logger.info(f"Processed {len(users)} customers from DummyJSON")
+                # Process users in batches
+                for i in range(0, len(users), batch_size):
+                    batch = users[i:i + batch_size]
+                    
+                    for user in batch:
+                        customer = self.transform_user_to_customer(user)
+                        self.send_customer(customer)
+                    
+                    logger.info(f"Processed batch {i//batch_size + 1}: {len(batch)} customers")
+                    
+                    # Small delay between batches
+                    time.sleep(0.5)
+                
+                logger.info(f"Completed cycle: {len(users)} customers from DummyJSON")
                 time.sleep(delay_seconds)
                 
             except KeyboardInterrupt:
@@ -107,4 +140,4 @@ class CustomersProducer:
 
 if __name__ == "__main__":
     producer = CustomersProducer()
-    producer.produce_customers(batch_size=20, delay_seconds=10)
+    producer.produce_customers(batch_size=100, delay_seconds=2, total_users_per_cycle=500)

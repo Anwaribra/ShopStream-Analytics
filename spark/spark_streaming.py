@@ -29,7 +29,7 @@ def run_stream():
     spark.sparkContext.setLogLevel("WARN")
 
     bootstrap_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-    topics_env = os.getenv("KAFKA_TOPICS", "customers,orders,products").strip()
+    topics_env = os.getenv("KAFKA_TOPICS", "customers,orders,products,events").strip()
     starting_offsets = os.getenv("KAFKA_STARTING_OFFSETS", "earliest")
 
     topics = ",".join([t.strip() for t in topics_env.split(",") if t.strip()])

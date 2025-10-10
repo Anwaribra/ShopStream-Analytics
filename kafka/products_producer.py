@@ -20,15 +20,37 @@ class ProductsProducer:
         )
         self.dummyjson_url = "https://dummyjson.com/products"
         
-    def fetch_products_from_dummyjson(self, limit=100):
+    def fetch_products_from_dummyjson(self, limit=100, skip=0):
+        """Fetch products with pagination support"""
         try:
-            response = requests.get(f"{self.dummyjson_url}?limit={limit}")
+            response = requests.get(f"{self.dummyjson_url}?limit={limit}&skip={skip}")
             response.raise_for_status()
             data = response.json()
             return data.get('products', [])
         except requests.RequestException as e:
             logger.error(f"Error fetching products {e}")
             return []
+    
+    def fetch_multiple_product_pages(self, total_products=1000):
+        """Fetch multiple pages of products to increase data volume"""
+        all_products = []
+        page_size = 100  # DummyJSON max per page
+        skip = 0
+        
+        while len(all_products) < total_products:
+            products = self.fetch_products_from_dummyjson(limit=page_size, skip=skip)
+            if not products:
+                break
+            
+            all_products.extend(products)
+            skip += page_size
+            
+            # Add small delay to respect API rate limits
+            time.sleep(0.1)
+            
+            logger.info(f"Fetched {len(all_products)} products so far...")
+        
+        return all_products[:total_products]
     
     def transform_product(self, product):
 
@@ -69,22 +91,34 @@ class ProductsProducer:
         except Exception as e:
             logger.error(f"Error sending product {product['product_id']}: {e}")
     
-    def produce_products(self, batch_size=10, delay_seconds=5):
+    def produce_products(self, batch_size=100, delay_seconds=2, total_products_per_cycle=1000):
+        """Enhanced producer with pagination and higher volume"""
         logger.info(f"Starting products producer for topic: {self.topic}")
         
         while True:
             try:
-                products = self.fetch_products_from_dummyjson(limit=batch_size)
+                # Fetch multiple pages of products for higher volume
+                products = self.fetch_multiple_product_pages(total_products=total_products_per_cycle)
+                
                 if not products:
                     logger.warning("No products fetched")
                     time.sleep(delay_seconds)
                     continue
 
-                for product in products:
-                    transformed_product = self.transform_product(product)
-                    self.send_product(transformed_product)
+                # Process products in batches
+                for i in range(0, len(products), batch_size):
+                    batch = products[i:i + batch_size]
+                    
+                    for product in batch:
+                        transformed_product = self.transform_product(product)
+                        self.send_product(transformed_product)
+                    
+                    logger.info(f"Processed batch {i//batch_size + 1}: {len(batch)} products")
+                    
+                   
+                    time.sleep(0.5)
                 
-                logger.info(f"Processed {len(products)} products ")
+                logger.info(f"Completed cycle: {len(products)} products from DummyJSON")
                 time.sleep(delay_seconds)
                 
             except KeyboardInterrupt:
@@ -98,4 +132,4 @@ class ProductsProducer:
 
 if __name__ == "__main__":
     producer = ProductsProducer()
-    producer.produce_products(batch_size=20, delay_seconds=10)
+    producer.produce_products(batch_size=100, delay_seconds=2, total_products_per_cycle=1000)

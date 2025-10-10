@@ -20,15 +20,37 @@ class OrdersProducer:
         )
         self.dummyjson_url = "https://dummyjson.com/carts"
         
-    def fetch_carts_from_dummyjson(self, limit=20):
+    def fetch_carts_from_dummyjson(self, limit=20, skip=0):
+        """Fetch carts with pagination support"""
         try:
-            response = requests.get(f"{self.dummyjson_url}?limit={limit}")
+            response = requests.get(f"{self.dummyjson_url}?limit={limit}&skip={skip}")
             response.raise_for_status()
             data = response.json()
             return data.get('carts', [])
         except requests.RequestException as e:
             logger.error(f"Error fetching carts {e}")
             return []
+    
+    def fetch_multiple_cart_pages(self, total_carts=200):
+        """Fetch multiple pages of carts to increase data volume"""
+        all_carts = []
+        page_size = 20  # DummyJSON carts per page
+        skip = 0
+        
+        while len(all_carts) < total_carts:
+            carts = self.fetch_carts_from_dummyjson(limit=page_size, skip=skip)
+            if not carts:
+                break
+            
+            all_carts.extend(carts)
+            skip += page_size
+            
+            # Add small delay to respect API rate limits
+            time.sleep(0.1)
+            
+            logger.info(f"Fetched {len(all_carts)} carts so far...")
+        
+        return all_carts[:total_carts]
     
     def fetch_products_for_orders(self, product_ids):
         products = []
@@ -105,20 +127,36 @@ class OrdersProducer:
         except Exception as e:
             logger.error(f"Error sending order {order['order_id']}: {e}")
     
-    def produce_orders(self, batch_size=5, delay_seconds=10):
+    def produce_orders(self, batch_size=50, delay_seconds=3, total_carts_per_cycle=200):
+        """Enhanced producer with pagination and higher volume"""
         logger.info(f"Starting orders producer for topic: {self.topic}")
+        
         while True:
             try:
-                carts = self.fetch_carts_from_dummyjson(limit=batch_size)
+                # Fetch multiple pages of carts for higher volume
+                carts = self.fetch_multiple_cart_pages(total_carts=total_carts_per_cycle)
+                
                 if not carts:
-                    logger.warning("No carts fetched ")
+                    logger.warning("No carts fetched")
                     time.sleep(delay_seconds)
                     continue
-                for cart in carts:
-                    order = self.transform_cart_to_order(cart)
-                    self.send_order(order)
-                logger.info(f"Processed {len(carts)} orders from DummyJSON")
-                time.sleep(delay_seconds) # avoid rate limiting
+                
+                # Process carts in batches
+                for i in range(0, len(carts), batch_size):
+                    batch = carts[i:i + batch_size]
+                    
+                    for cart in batch:
+                        order = self.transform_cart_to_order(cart)
+                        self.send_order(order)
+                    
+                    logger.info(f"Processed batch {i//batch_size + 1}: {len(batch)} orders")
+                    
+                    # Small delay between batches
+                    time.sleep(0.5)
+                
+                logger.info(f"Completed cycle: {len(carts)} orders from DummyJSON")
+                time.sleep(delay_seconds)
+                
             except KeyboardInterrupt:
                 logger.info("Stopping orders producer...")
                 break
@@ -130,4 +168,4 @@ class OrdersProducer:
 
 if __name__ == "__main__":
     producer = OrdersProducer()
-    producer.produce_orders(batch_size=10, delay_seconds=15)
+    producer.produce_orders(batch_size=50, delay_seconds=3, total_carts_per_cycle=200)

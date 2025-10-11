@@ -17,7 +17,11 @@ requirements.txt
 
 checkpoints/
 
+_pycache_/ 
 
 airflow/dags/spark_streaming_dag.py
 kafka/consumers/spark_streaming.py
 kafka/consumers/postgres_loader.py
+ariflow/dags/_pycache_/ 
+airflow.cfg
+airflow.db  

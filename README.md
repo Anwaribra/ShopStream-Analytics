@@ -7,7 +7,7 @@ The project ingests e-commerce datasets (customers, orders, products, events) fr
 ---
 
 ## Pipeline Flow
-![Pipeline Architecture](docs\PipelineArchitectur.jpg) 
+![Pipeline Architecture](docs/PipelineArchitectur.jpg) 
 1. **Ingestion**: Kafka producers fetch data from DummyJSON API and publish events.  
 2. **Bronze Layer**: Kafka consumers write raw JSON into PostgreSQL.  
 3. **Silver Layer**: Spark jobs (structured streaming + batch) clean and normalize data.  
@@ -32,6 +32,8 @@ The project follows the **Medallion Architecture**:
   - Business logic and transformations via **dbt**.  
   - Fact and Dimension tables for analytics.  
   - Stored in PostgreSQL (gold schema).
+
+ **For detailed data models and architecture documentation, see [Data Warehouse Documentation](docs/README.md)**
 
 ## Data Model
 

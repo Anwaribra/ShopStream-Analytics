@@ -7,6 +7,7 @@ The project ingests e-commerce datasets (customers, orders, products, events) fr
 ---
 
 ## Pipeline Flow
+![Pipeline Architecture](docs\PipelineArchitectur.jpg) 
 1. **Ingestion**: Kafka producers fetch data from DummyJSON API and publish events.  
 2. **Bronze Layer**: Kafka consumers write raw JSON into PostgreSQL.  
 3. **Silver Layer**: Spark jobs (structured streaming + batch) clean and normalize data.  

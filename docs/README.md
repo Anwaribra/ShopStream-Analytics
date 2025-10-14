@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # ShopStream Data Warehouse -  Medallion Architecture Documentation
+=======
+# ShopStream Analytics -Medallion Architecture Documentation
+>>>>>>> 2f7c97c0cd8e9ca141675bea0506a99d57ae7301
 
 
 

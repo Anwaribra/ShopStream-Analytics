@@ -1,0 +1,12 @@
+shopstream_dwh:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      user: postgres
+      password: "2003"  
+      port: 5432
+      dbname: shopstream_dwh
+      schema: silver
+      threads: 4

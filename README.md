@@ -1,39 +1,50 @@
-# ShopStream Analytics
+# ShopStream Data Warehouse
 
 ## Overview
-**ShopStream Analytics** is a modern data engineering project that demonstrates how to build a real-time Data Warehouse (DWH) and analytics platform using **streaming, batch processing, and medallion architecture**.  
+**ShopStream Data Warehouse** is a modern data engineering project that demonstrates how to build a complete real-time Data Warehouse (DWH) using **streaming, batch processing, and medallion architecture**.  
 The project ingests e-commerce datasets (customers, orders, products, events) from the **DummyJSON API** and processes them through an end-to-end pipeline.
 
 ---
 
 ## Pipeline Flow
 ![Pipeline Architecture](docs/PipelineArchitectur.jpg) 
+
 1. **Ingestion**: Kafka producers fetch data from DummyJSON API and publish events.  
-2. **Bronze Layer**: Kafka consumers write raw JSON into PostgreSQL.  
-3. **Silver Layer**: Spark jobs (structured streaming + batch) clean and normalize data.  
-4. **Gold Layer**: dbt models create analytics-ready tables (facts & dimensions).  
-5. **Visualization**: BI dashboards show insights (sales, customers, product trends, events).  
+2. **Bronze Layer**: Spark Structured Streaming consumes Kafka topics and writes raw JSON data to PostgreSQL `bronze.raw_events` table.  
+3. **Silver Layer**: dbt models process raw data from Bronze layer, clean and normalize it into structured tables (`customers`, `products`, `orders`, `order_items`, `events`).  
+4. **Gold Layer**: dbt models create analytics-ready fact and dimension tables (`dim_customers`, `dim_products`, `fct_orders`, `fct_order_items`, `agg_orders_daily`, `agg_events_daily`).  
+5. **Data Warehouse**: Complete DWH with analytics-ready tables for business intelligence and reporting.  
 
 
 ## Architecture
 The project follows the **Medallion Architecture**:
 
 - **Bronze Layer (Raw Data)**  
-  - Ingest raw data from DummyJSON API.  
-  - Data stored in **PostgreSQL** (raw schema).  
-  - Kafka streams simulate continuous ingestion.
+  - **Spark Structured Streaming** consumes Kafka topics (`customers`, `products`, `orders`, `events`).  
+  - Raw JSON data stored in **PostgreSQL** `bronze.raw_events` table with Kafka metadata.  
+  - Real-time streaming ingestion with checkpointing for fault tolerance.
 
 - **Silver Layer (Cleaned & Processed Data)**  
-  - Transformations using **DBT** (streaming + batch).  
-  - Data deduplication, cleaning, and normalization.  
-  - Stored in PostgreSQL (silver schema).
+  - **dbt models** process raw data from Bronze layer.  
+  - Data deduplication, cleaning, type casting, and normalization.  
+  - Incremental processing for efficiency.  
+  - Stored in PostgreSQL `silver` schema (`customers`, `products`, `orders`, `order_items`, `events`).
 
 - **Gold Layer (Analytics-Ready Data)**  
-  - Business logic and transformations via **dbt**.  
-  - Fact and Dimension tables for analytics.  
-  - Stored in PostgreSQL (gold schema).
+  - **dbt models** create business-ready datasets.  
+  - Star schema design with fact and dimension tables.  
+  - Pre-aggregated metrics (`agg_orders_daily`, `agg_events_daily`).  
+  - Stored in PostgreSQL `gold` schema for BI tools and reporting.
 
  **For detailed data models and architecture documentation, see [Data Warehouse Documentation](docs/README.md)**
+
+## Tech Stack
+- **Apache Kafka** → Real-time data streaming and message ingestion  
+- **Apache Spark** → Structured streaming for real-time data processing  
+- **PostgreSQL** → Data warehouse storage (Bronze, Silver, Gold layers)  
+- **dbt** → Data transformations and modeling (Silver → Gold)  
+- **Apache Airflow** → Pipeline orchestration and scheduling  
+- **DummyJSON API** → Real-world e-commerce data source  
 
 ## Data Model
 

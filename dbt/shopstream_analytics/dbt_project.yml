@@ -1,7 +1,7 @@
-name: 'shopstream_analytics'
+name: 'shopstream_dwh'
 version: '1.0.0'
 
-profile: 'shopstream_analytics'
+profile: 'shopstream_dwh'
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -15,7 +15,7 @@ clean-targets:
   - "dbt_packages"
 
 models:
-  shopstream_analytics:
+  shopstream_dwh:
    
     example:
       +materialized: view

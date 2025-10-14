@@ -12,10 +12,6 @@ services:
       - AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS=admin:admin,viewer:viewer
     volumes:
      - ./airflow/dags:/opt/airflow/dags
-      - "D:/Projects/ShopStream Analytics/airflow/dags:/opt/airflow/dags"
-      - "D:/Projects/ShopStream Analytics/airflow/dags/simple_test_dag.py:/opt/airflow/dags/simple_test_dag.py"
-      - "D:/Projects/ShopStream Analytics/plugins:/opt/airflow/plugins"
-      - "D:/Projects/ShopStream Analytics/airflow/dags/medallion_pipeline_dag.py:/opt/airflow/dags/medallion_pipeline_dag.py"
     networks:
       - iot-network
 
@@ -36,12 +32,6 @@ services:
       - AIRFLOW_WWW_USER_PASSWORD=${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
     volumes:
       - ./airflow/dags:/opt/airflow/dags
-      - "D:/Projects/ShopStream Analytics/airflow/dags:/opt/airflow/dags"
-      - "D:/Projects/ShopStream Analytics/airflow/dags/simple_test_dag.py:/opt/airflow/dags/simple_test_dag.py"
-      - "D:/Projects/ShopStream Analytics/plugins:/opt/airflow/plugins"
-      - "D:/Projects/ShopStream Analytics/airflow/dags/medallion_pipeline_dag.py:/opt/airflow/dags/medallion_pipeline_dag.py"
-
-
     networks:
       - iot-network
     restart: unless-stopped
@@ -63,10 +53,7 @@ services:
       - AIRFLOW_WWW_USER_PASSWORD=${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
     volumes:
       - ./airflow/dags:/opt/airflow/dags
-      - "D:/Projects/ShopStream Analytics/airflow/dags:/opt/airflow/dags"
-      - "D:/Projects/ShopStream Analytics/airflow/dags/simple_test_dag.py:/opt/airflow/dags/simple_test_dag.py"
-      - "D:/Projects/ShopStream Analytics/plugins:/opt/airflow/plugins"
-      - "D:/Projects/ShopStream Analytics/airflow/dags/medallion_pipeline_dag.py:/opt/airflow/dags/medallion_pipeline_dag.py"
+  
     networks:
       - iot-network
     restart: unless-stopped
@@ -86,10 +73,6 @@ services:
       - AIRFLOW_WWW_USER_PASSWORD=${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
     volumes:
       - ./airflow/dags:/opt/airflow/dags
-      - "D:/Projects/ShopStream Analytics/airflow/dags:/opt/airflow/dags"
-      - "D:/Projects/ShopStream Analytics/airflow/dags/simple_test_dag.py:/opt/airflow/dags/simple_test_dag.py"
-      - "D:/Projects/ShopStream Analytics/plugins:/opt/airflow/plugins"
-      - "D:/Projects/ShopStream Analytics/airflow/dags/medallion_pipeline_dag.py:/opt/airflow/dags/medallion_pipeline_dag.py"
     networks:
       - iot-network
     restart: unless-stopped

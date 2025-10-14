@@ -1,4 +1,4 @@
-# ShopStream Analytics -  Medallion Architecture Documentation
+# ShopStream Data Warehouse -  Medallion Architecture Documentation
 
 
 

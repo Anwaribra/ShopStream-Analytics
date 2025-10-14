@@ -25,3 +25,7 @@ kafka/consumers/postgres_loader.py
 ariflow/dags/_pycache_/ 
 airflow.cfg
 airflow.db  
+
+
+
+data/
